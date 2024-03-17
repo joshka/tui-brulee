@@ -37,13 +37,13 @@ pub fn text_measure_function(
         let mut line_count = 1;
         let mut current_line_length = 0;
         for word in &words {
-            if current_line_length + word.len() > inline_line_length {
-                if current_line_length > 0 {
-                    line_count += 1
-                };
+            if current_line_length == 0 {
+                current_line_length = word.len();
+            } else if current_line_length + 1 + word.len() > inline_line_length {
+                line_count += 1;
                 current_line_length = word.len();
             } else {
-                current_line_length += word.len();
+                current_line_length += word.len() + 1;
             };
         }
         line_count as f32
