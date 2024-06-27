@@ -5,9 +5,12 @@ use std::time::Duration;
 
 use color_eyre::Result;
 use common::tui;
-use crossterm::event::{self, Event};
-use ratatui::{prelude::*, widgets::Block};
-use taffy::prelude::*;
+use ratatui::{
+    crossterm::event::{self, Event},
+    widgets::Block,
+    Frame,
+};
+use taffy::prelude::{NodeId, TaffyTree};
 use tui_brulee::{to_available_space, to_rect};
 
 mod common;

@@ -10,17 +10,19 @@ use std::time::Duration;
 
 use color_eyre::Result;
 use common::{errors, tui};
-use crossterm::event::{self, Event};
 use ratatui::{
-    prelude::*,
+    crossterm::event::{self, Event},
+    style::Stylize,
     widgets::{Block, Paragraph},
+    Frame,
 };
-use taffy::prelude::*;
+use taffy::prelude::{length, percent, AlignItems, JustifyContent, NodeId, TaffyTree};
 use tui_brulee::{to_available_space, to_rect};
 
 mod common;
 
 fn main() -> Result<()> {
+    tracing_subscriber::fmt::init();
     errors::install_hooks()?;
     let mut taffy: TaffyTree<()> = TaffyTree::new();
     taffy.enable_rounding();

@@ -7,9 +7,13 @@ use std::time::Duration;
 
 use color_eyre::Result;
 use common::{errors, tui};
-use crossterm::event::{self, Event};
-use ratatui::{prelude::*, widgets::Block};
-use taffy::prelude::*;
+use ratatui::{
+    crossterm::event::{self, Event},
+    style::{Color, Stylize},
+    widgets::Block,
+    Frame,
+};
+use taffy::prelude::{length, zero, NodeId, Size, TaffyTree};
 use tui_brulee::{to_available_space, to_rect};
 
 mod common;

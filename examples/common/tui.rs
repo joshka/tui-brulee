@@ -1,10 +1,13 @@
 use std::io::{self, stdout};
 
-use crossterm::{
-    execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+use ratatui::{
+    backend::{Backend, CrosstermBackend},
+    crossterm::{
+        execute,
+        terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    },
+    terminal::Terminal,
 };
-use ratatui::prelude::*;
 
 pub fn init() -> io::Result<(Terminal<impl Backend>, TuiGuard)> {
     let backend = CrosstermBackend::new(stdout());

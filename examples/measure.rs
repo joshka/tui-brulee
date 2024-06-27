@@ -8,12 +8,15 @@ use common::{
     image::{image_measure_function, ImageContext},
     text::{text_measure_function, TextContext, LOREM_IPSUM},
 };
-use crossterm::event::{self, Event};
 use ratatui::{
-    prelude::*,
+    crossterm::event::{self, Event},
     widgets::{Block, Paragraph, Wrap},
+    Frame,
 };
-use taffy::prelude::*;
+use taffy::{
+    prelude::{auto, Display, FlexDirection, NodeId, Size, TaffyTree},
+    style_helpers::max_content,
+};
 use tui_brulee::{to_available_space, to_rect};
 
 enum NodeContext {
@@ -59,11 +62,11 @@ fn main() -> Result<()> {
     // Compute layout and print result
     taffy.compute_layout_with_measure(
         root,
-        Size::MAX_CONTENT,
+        max_content(),
         // Note: this closure is a FnMut closure and can be used to borrow external context for the
         // duration of layout For example, you may wish to borrow a global font registry and pass it
         // into your text measuring function
-        |known_dimensions, available_space, _node_id, node_context| {
+        |known_dimensions, available_space, _node_id, node_context, _style| {
             measure_function(known_dimensions, available_space, node_context)
         },
     )?;
@@ -94,7 +97,7 @@ fn render(
     taffy.compute_layout_with_measure(
         root,
         to_available_space(frame.size()),
-        |known_dimensions, available_space, _node_id, node_context| {
+        |known_dimensions, available_space, _node_id, node_context, _style| {
             measure_function(known_dimensions, available_space, node_context)
         },
     )?;
