@@ -6,66 +6,88 @@
 //! root node.
 //!
 
-use std::time::Duration;
-
 use color_eyre::Result;
-use common::{errors, tui};
+use common::tui::{self, Terminal};
 use ratatui::{
     crossterm::event::{self, Event},
-    style::Stylize,
+    layout::Rect,
+    prelude::{Frame, Stylize},
     widgets::{Block, Paragraph},
-    Frame,
 };
-use taffy::prelude::{length, percent, AlignItems, JustifyContent, NodeId, TaffyTree};
-use tui_brulee::{to_available_space, to_rect};
+use taffy::{
+    prelude::{length, percent, AlignItems, JustifyContent, NodeId, TaffyTree},
+    AvailableSpace,
+};
+use tui_brulee::{ToAvailableSpace, ToRect};
 
 mod common;
 
 fn main() -> Result<()> {
-    errors::install_hooks()?;
-    let mut taffy: TaffyTree<()> = TaffyTree::new();
-    taffy.enable_rounding();
+    color_eyre::install()?;
+    let mut app = App::new()?;
+    let mut terminal = tui::init()?;
+    let result = app.run(&mut terminal);
+    tui::restore()?;
+    result
+}
 
-    let child = taffy.new_leaf(taffy::Style {
-        size: percent(0.5),
-        ..Default::default()
-    })?;
+struct App {
+    taffy: TaffyTree<()>,
+    root: NodeId,
+    child: NodeId,
+}
 
-    let root = taffy.new_with_children(
-        taffy::Style {
+impl App {
+    fn new() -> Result<Self> {
+        let mut taffy: TaffyTree<()> = TaffyTree::new();
+        taffy.enable_rounding();
+
+        let root = taffy.new_leaf(taffy::Style {
             size: percent(1.0),
             border: length(1.0),
             justify_content: Some(JustifyContent::Center),
             align_items: Some(AlignItems::Center),
             ..Default::default()
-        },
-        &[child],
-    )?;
+        })?;
 
-    let (mut terminal, _guard) = tui::init()?;
-    loop {
-        terminal.draw(|frame| draw(frame, &mut taffy, root, child).unwrap())?;
-        if event::poll(Duration::from_secs(1))? {
+        let child = taffy.new_leaf(taffy::Style {
+            size: percent(0.5),
+            ..Default::default()
+        })?;
+        taffy.add_child(root, child)?;
+
+        Ok(Self { taffy, root, child })
+    }
+
+    fn run(&mut self, terminal: &mut Terminal) -> Result<()> {
+        loop {
+            terminal.draw(|frame| self.draw(frame).unwrap())?;
             if let Event::Key(_) = event::read()? {
-                break;
+                break Ok(());
             }
         }
     }
-    Ok(())
-}
 
-fn draw(frame: &mut Frame, taffy: &mut TaffyTree<()>, root: NodeId, child: NodeId) -> Result<()> {
-    taffy.compute_layout(root, to_available_space(frame.size()))?;
+    fn draw(&mut self, frame: &mut Frame) -> Result<()> {
+        let (root_area, child_rect) = self.compute_layout(frame.size().to_available_space())?;
 
-    let root_area = to_rect(taffy.layout(root)?);
-    let child_rect = to_rect(taffy.layout(child)?);
+        let root_block = Block::bordered().title("Root").on_blue();
+        let child_block = Block::bordered().title("Child").on_red();
+        let child_paragraph = Paragraph::new("Press any key to exit").block(child_block);
 
-    let root_block = Block::bordered().title("Root").on_blue();
-    let child_block = Block::bordered().title("Child").on_red();
-    let child_paragraph = Paragraph::new("Press any key to exit").block(child_block);
+        frame.render_widget(root_block, root_area);
+        frame.render_widget(child_paragraph, child_rect);
 
-    frame.render_widget(root_block, root_area);
-    frame.render_widget(child_paragraph, child_rect);
+        Ok(())
+    }
 
-    Ok(())
+    fn compute_layout(
+        &mut self,
+        available_space: taffy::Size<AvailableSpace>,
+    ) -> color_eyre::Result<(Rect, Rect)> {
+        self.taffy.compute_layout(self.root, available_space)?;
+        let root_area = self.taffy.layout(self.root)?.to_rect();
+        let child_rect = self.taffy.layout(self.child)?.to_rect();
+        Ok((root_area, child_rect))
+    }
 }

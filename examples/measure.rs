@@ -4,7 +4,6 @@ use std::time::Duration;
 
 use color_eyre::Result;
 use common::{
-    errors,
     image::{image_measure_function, ImageContext},
     text::{text_measure_function, TextContext, LOREM_IPSUM},
 };
@@ -25,7 +24,7 @@ enum NodeContext {
 }
 
 fn main() -> Result<()> {
-    errors::install_hooks()?;
+    color_eyre::install()?;
     let mut taffy: TaffyTree<NodeContext> = TaffyTree::new();
     taffy.enable_rounding();
 
@@ -72,7 +71,7 @@ fn main() -> Result<()> {
     )?;
     taffy.print_tree(root);
 
-    let (mut terminal, _guard) = common::tui::init()?;
+    let mut terminal = common::tui::init()?;
     loop {
         terminal.draw(|frame| {
             render(frame, &mut taffy, root, text_node, image_node).expect("render failed");
@@ -83,7 +82,6 @@ fn main() -> Result<()> {
             }
         }
     }
-    drop(_guard);
     Ok(())
 }
 

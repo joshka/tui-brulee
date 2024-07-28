@@ -1,20 +1,19 @@
-use std::io::{self, stdout};
+use std::io::{self, stdout, Stdout};
 
 use ratatui::{
-    backend::{Backend, CrosstermBackend},
+    backend::CrosstermBackend,
     crossterm::{
         execute,
         terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     },
-    terminal::Terminal,
 };
 
-pub fn init() -> io::Result<(Terminal<impl Backend>, TuiGuard)> {
-    let backend = CrosstermBackend::new(stdout());
-    let terminal = Terminal::new(backend)?;
+pub type Terminal = ratatui::Terminal<CrosstermBackend<Stdout>>;
+
+pub fn init() -> io::Result<Terminal> {
     execute!(stdout(), EnterAlternateScreen)?;
     enable_raw_mode()?;
-    Ok((terminal, TuiGuard))
+    Terminal::new(CrosstermBackend::new(stdout()))
 }
 
 pub fn restore() -> io::Result<()> {
@@ -22,10 +21,13 @@ pub fn restore() -> io::Result<()> {
     disable_raw_mode()?;
     Ok(())
 }
-pub struct TuiGuard;
 
-impl Drop for TuiGuard {
-    fn drop(&mut self) {
-        restore().unwrap();
-    }
+pub fn set_hook() {
+    let hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |panic_info| {
+        if let Err(err) = restore() {
+            eprintln!("Error restoring terminal: {:?}", err);
+        }
+        hook(panic_info);
+    }));
 }

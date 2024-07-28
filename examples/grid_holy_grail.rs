@@ -29,6 +29,7 @@ struct NodeIds {
     footer: NodeId,
 }
 fn main() -> Result<()> {
+    color_eyre::install()?;
     use taffy::prelude::*;
 
     let mut taffy: TaffyTree<()> = TaffyTree::new();
@@ -95,7 +96,7 @@ fn main() -> Result<()> {
         },
     )?;
 
-    let (mut terminal, _guard) = tui::init()?;
+    let mut terminal = tui::init()?;
     loop {
         terminal.draw(|frame| {
             render(frame, &mut taffy, node_ids).expect("render failed");
