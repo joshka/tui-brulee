@@ -22,7 +22,6 @@ use tui_brulee::{to_available_space, to_rect};
 mod common;
 
 fn main() -> Result<()> {
-    tracing_subscriber::fmt::init();
     errors::install_hooks()?;
     let mut taffy: TaffyTree<()> = TaffyTree::new();
     taffy.enable_rounding();
