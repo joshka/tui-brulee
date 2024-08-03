@@ -37,7 +37,6 @@ struct App {
 impl App {
     fn new() -> Result<Self> {
         let mut taffy: TaffyTree<()> = TaffyTree::new();
-        taffy.enable_rounding();
 
         let child_style = taffy::Style {
             size: Size::from_lengths(20.0, 10.0),

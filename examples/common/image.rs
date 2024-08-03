@@ -5,23 +5,26 @@ pub struct ImageContext {
     pub height: f32,
 }
 
-pub fn image_measure_function(
-    known_dimensions: taffy::geometry::Size<Option<f32>>,
-    image_context: &ImageContext,
-) -> taffy::geometry::Size<f32> {
-    match (known_dimensions.width, known_dimensions.height) {
-        (Some(width), Some(height)) => Size { width, height },
-        (Some(width), None) => Size {
-            width,
-            height: (width / image_context.width) * image_context.height,
-        },
-        (None, Some(height)) => Size {
-            width: (height / image_context.height) * image_context.width,
-            height,
-        },
-        (None, None) => Size {
-            width: image_context.width,
-            height: image_context.height,
-        },
+impl ImageContext {
+    pub fn new(width: f32, height: f32) -> Self {
+        Self { width, height }
+    }
+
+    pub fn measure(&self, known_dimensions: Size<Option<f32>>) -> Size<f32> {
+        match (known_dimensions.width, known_dimensions.height) {
+            (Some(width), Some(height)) => Size { width, height },
+            (Some(width), None) => Size {
+                width,
+                height: (width / self.width) * self.height,
+            },
+            (None, Some(height)) => Size {
+                width: (height / self.height) * self.width,
+                height,
+            },
+            (None, None) => Size {
+                width: self.width,
+                height: self.height,
+            },
+        }
     }
 }

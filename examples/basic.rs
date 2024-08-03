@@ -40,7 +40,6 @@ struct App {
 impl App {
     fn new() -> Result<Self> {
         let mut taffy: TaffyTree<()> = TaffyTree::new();
-        taffy.enable_rounding();
 
         let root = taffy.new_leaf(taffy::Style {
             size: percent(1.0),
