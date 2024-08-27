@@ -6,17 +6,19 @@
 //! root node.
 //!
 
+use std::io;
+
 use color_eyre::Result;
-use common::tui::{self, Terminal};
 use ratatui::{
     crossterm::event::{self, Event},
     layout::Rect,
     prelude::{Frame, Stylize},
     widgets::{Block, Paragraph},
+    DefaultTerminal,
 };
 use taffy::{
     prelude::{length, percent, AlignItems, JustifyContent, NodeId, TaffyTree},
-    AvailableSpace,
+    AvailableSpace, TaffyResult,
 };
 use tui_brulee::{ToAvailableSpace, ToRect};
 
@@ -24,10 +26,10 @@ mod common;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
+    let terminal = ratatui::init();
     let mut app = App::new()?;
-    let mut terminal = tui::init()?;
-    let result = app.run(&mut terminal);
-    tui::restore()?;
+    let result = app.run(terminal);
+    ratatui::restore();
     result
 }
 
@@ -58,17 +60,19 @@ impl App {
         Ok(Self { taffy, root, child })
     }
 
-    fn run(&mut self, terminal: &mut Terminal) -> Result<()> {
+    fn run(&mut self, mut terminal: DefaultTerminal) -> Result<()> {
         loop {
-            terminal.draw(|frame| self.draw(frame).unwrap())?;
+            terminal.try_draw(|frame| self.draw(frame))?;
             if let Event::Key(_) = event::read()? {
                 break Ok(());
             }
         }
     }
 
-    fn draw(&mut self, frame: &mut Frame) -> Result<()> {
-        let (root_area, child_rect) = self.compute_layout(frame.size().to_available_space())?;
+    fn draw(&mut self, frame: &mut Frame) -> io::Result<()> {
+        let (root_area, child_rect) = self
+            .compute_layout(frame.area().to_available_space())
+            .map_err(common::to_io_error)?;
 
         let root_block = Block::bordered().title("Root").on_blue();
         let child_block = Block::bordered().title("Child").on_red();
@@ -83,7 +87,7 @@ impl App {
     fn compute_layout(
         &mut self,
         available_space: taffy::Size<AvailableSpace>,
-    ) -> color_eyre::Result<(Rect, Rect)> {
+    ) -> TaffyResult<(Rect, Rect)> {
         self.taffy.compute_layout(self.root, available_space)?;
         let root_area = self.taffy.layout(self.root)?.to_rect();
         let child_rect = self.taffy.layout(self.child)?.to_rect();

@@ -1,5 +1,7 @@
 mod common;
 
+use std::io;
+
 use color_eyre::Result;
 use common::{
     image::ImageContext,
@@ -8,11 +10,9 @@ use common::{
 use ratatui::{
     crossterm::event::{self, Event},
     widgets::{Block, Paragraph, Wrap},
-    Frame,
+    DefaultTerminal, Frame,
 };
-use taffy::prelude::{
-    auto, length, AvailableSpace, Display, FlexDirection, NodeId, Size, TaffyTree,
-};
+use taffy::prelude::{auto, AvailableSpace, Display, FlexDirection, NodeId, Size, TaffyTree};
 use tui_brulee::{ToAvailableSpace, ToRect};
 
 enum NodeContext {
@@ -23,9 +23,9 @@ enum NodeContext {
 fn main() -> Result<()> {
     color_eyre::install()?;
     let mut app = App::new()?;
-    let mut terminal = common::tui::init()?;
-    let result = app.run(&mut terminal);
-    common::tui::restore()?;
+    let terminal = ratatui::init();
+    let result = app.run(terminal);
+    ratatui::restore();
     result
 }
 
@@ -68,26 +68,36 @@ impl App {
         })
     }
 
-    fn run(&mut self, terminal: &mut common::tui::Terminal) -> Result<()> {
+    fn run(&mut self, mut terminal: DefaultTerminal) -> Result<()> {
         loop {
-            terminal.draw(|frame| self.draw(frame).unwrap())?;
+            terminal.try_draw(|frame| self.draw(frame))?;
             if let Event::Key(_) = event::read()? {
                 break Ok(());
             }
         }
     }
 
-    fn draw(&mut self, frame: &mut Frame) -> Result<()> {
-        self.taffy.compute_layout_with_measure(
-            self.root,
-            frame.size().to_available_space(),
-            |known_dimensions, available_space, _node_id, node_context, _style| {
-                measure_function(known_dimensions, available_space, node_context)
-            },
-        )?;
+    fn draw(&mut self, frame: &mut Frame) -> io::Result<()> {
+        self.taffy
+            .compute_layout_with_measure(
+                self.root,
+                frame.area().to_available_space(),
+                |known_dimensions, available_space, _node_id, node_context, _style| {
+                    measure_function(known_dimensions, available_space, node_context)
+                },
+            )
+            .map_err(common::to_io_error)?;
 
-        let text_area = self.taffy.layout(self.text_node)?.to_rect();
-        let image_area = self.taffy.layout(self.image_node)?.to_rect();
+        let text_area = self
+            .taffy
+            .layout(self.text_node)
+            .map_err(common::to_io_error)?
+            .to_rect();
+        let image_area = self
+            .taffy
+            .layout(self.image_node)
+            .map_err(common::to_io_error)?
+            .to_rect();
 
         let paragraph = Paragraph::new(LOREM_IPSUM).wrap(Wrap { trim: false });
         let image =

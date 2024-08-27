@@ -3,16 +3,15 @@
 //! Creates three 20px x 10px children, evenly spaced 10px apart from each other with a 1px border
 //! around the root. Thus the container is 82px x 12px.
 
-use std::time::Duration;
+use std::{io, time::Duration};
 
 use color_eyre::Result;
-use common::tui;
 use ratatui::{
     crossterm::event::{self, Event},
     layout::Rect,
     style::{Color, Stylize},
     widgets::Block,
-    Frame,
+    DefaultTerminal, Frame,
 };
 use taffy::prelude::{length, zero, NodeId, Size, TaffyTree};
 use tui_brulee::{ToAvailableSpace, ToRect};
@@ -21,10 +20,10 @@ mod common;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
+    let terminal = ratatui::init();
     let mut app = App::new()?;
-    let mut terminal = tui::init()?;
-    let result = app.run(&mut terminal);
-    tui::restore()?;
+    let result = app.run(terminal);
+    ratatui::restore();
     result
 }
 
@@ -66,9 +65,9 @@ impl App {
         })
     }
 
-    fn run(&mut self, terminal: &mut tui::Terminal) -> Result<()> {
+    fn run(&mut self, mut terminal: DefaultTerminal) -> Result<()> {
         loop {
-            terminal.draw(|frame| self.draw(frame).unwrap())?;
+            terminal.try_draw(|frame| self.draw(frame))?;
             if event::poll(Duration::from_secs(1))? {
                 if let Event::Key(_) = event::read()? {
                     break Ok(());
@@ -77,8 +76,10 @@ impl App {
         }
     }
 
-    fn draw(&mut self, frame: &mut Frame) -> Result<()> {
-        let (root_area, child_rects) = self.compute_layout(frame.size())?;
+    fn draw(&mut self, frame: &mut Frame) -> io::Result<()> {
+        let (root_area, child_rects) = self
+            .compute_layout(frame.area())
+            .map_err(|err| io::Error::other(err))?;
 
         let root_block = Block::bordered().title("Root").on_red();
         frame.render_widget(root_block, root_area);

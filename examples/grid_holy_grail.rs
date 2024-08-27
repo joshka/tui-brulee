@@ -1,10 +1,9 @@
 // This creates a so-called "holy grail" layout using the CSS Grid layout algorithm
 // See: https://en.wikipedia.org/wiki/Holy_grail_(web_design)
 
-use std::time::Duration;
+use std::{io, time::Duration};
 
 use color_eyre::Result;
-use common::tui;
 use ratatui::{
     crossterm::event::{self, Event},
     widgets::Block,
@@ -96,11 +95,9 @@ fn main() -> Result<()> {
         },
     )?;
 
-    let mut terminal = tui::init()?;
+    let mut terminal = ratatui::init();
     loop {
-        terminal.draw(|frame| {
-            render(frame, &mut taffy, node_ids).expect("render failed");
-        })?;
+        terminal.try_draw(|frame| render(frame, &mut taffy, node_ids))?;
         if event::poll(Duration::from_secs(1))? {
             if let Event::Key(_) = event::read()? {
                 break;
@@ -110,10 +107,12 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn render(frame: &mut Frame, taffy: &mut TaffyTree, node_ids: NodeIds) -> Result<()> {
-    taffy.compute_layout(node_ids.root, to_available_space(frame.size()))?;
+fn render(frame: &mut Frame, taffy: &mut TaffyTree, node_ids: NodeIds) -> io::Result<()> {
+    taffy
+        .compute_layout(node_ids.root, to_available_space(frame.area()))
+        .map_err(common::to_io_error)?;
 
-    let root_layout = taffy.layout(node_ids.root)?;
+    let root_layout = taffy.layout(node_ids.root).map_err(common::to_io_error)?;
     let root_rect = to_rect(root_layout);
     let root_block = Block::bordered().title("Root");
     frame.render_widget(root_block, root_rect);
@@ -125,7 +124,7 @@ fn render(frame: &mut Frame, taffy: &mut TaffyTree, node_ids: NodeIds) -> Result
         (node_ids.right_sidebar, "Right Sidebar"),
         (node_ids.footer, "Footer"),
     ] {
-        let child_layout = taffy.layout(node_id)?;
+        let child_layout = taffy.layout(node_id).map_err(common::to_io_error)?;
         let child_rect = to_rect(child_layout);
         let child_block = Block::bordered().title(title);
         frame.render_widget(child_block, child_rect);
